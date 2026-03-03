@@ -1,6 +1,6 @@
 # Explainable Machine Learning for Tap Water Quality
 
-This repository contains code for the entire pipeline used in the explainable machine learning portion of the work featured in "EXplainable Machine Learning and Complex Network Theory to Manage Tap Water Quality", by Gleeson, K. , Kyritsakas, G., Husband, S., and Boxall, J. (2026). 
+This repository contains code for the entire pipeline used in the explainable machine learning portion of the work featured in "Explainable Machine Learning and Complex Network Theory to Manage Tap Water Quality", by Gleeson K., Kyritsakas G., Husband S., and Boxall J. (2026). 
 
 In this work, 4 target tap water quality parameters were selected as targets, as outlined in the paper. This repository shows the pipeline used for predicting low free chlorine events (< 0.1 mg/L) at customer taps. The same code and pipeline was applied to the other 3 target features.
 
