@@ -47,3 +47,18 @@ All network and WQ features (~100+)
   --> results/final_results.csv
   --> results/final_model_shap.pkl
 ```
+
+# SOMs Code Pipeline
+
+The Self Organising Maps (SOMs) code is written in MATLAB and combined multiple water related parameters to generate its outputs.
+To reproduce the results the following steps are required
+
+1) Select the input variables for the SOM analysis in sw_case.m
+2) Run sw_generate_som_input.m to generate csv files used as inputs for the SOM
+3) Run sw_generate_som.m to produce output Self organising maps.
+
+This SOMs execution requires the SOM toolbox 2.1 for MATLAB:
+https://github.com/ilarinieminen/SOM-Toolbox/blob/master/README
+
+
+
