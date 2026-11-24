@@ -4,7 +4,7 @@ This repository contains code for the entire pipeline used in the explainable ma
 
 In this work, 4 target tap water quality parameters were selected as targets, as outlined in the paper. This repository shows the pipeline used for predicting low free chlorine events (< 0.1 mg/L) at customer taps. The same code and pipeline was applied to the other 3 target features.
 
-> **Data availability**: The underlying dataset is proprietary operational data from a UK water company and cannot be shared. The scripts are provided to document the methodology.
+> **Data availability**: The underlying dataset is proprietary operational data from a UK water company and cannot be shared. The scripts are provided to document the methodology, and the trained final models are provided in `models/`.
 
 > **Runtime**: On a dataset of similar size to this project (~100 features, tens of thousands of samples), Step 3 (forward stepwise) is the most computationally expensive as it involves trialling every remaining candidate across 5-fold CV at each selection step amounts to hundreds of model fits per step, and can take several hours per model on a single machine. For the published work, this code was adapted to run in a parallelised form within a SLURM HPC environment; the scripts here are provided in their sequential, single-machine form for clarity.
 
@@ -17,9 +17,10 @@ All network and WQ features (~100+)
            |
            v
   01_initial_shap.py
-  Each model (RF, GB, XGBoost) is trained on all features
-  and its own SHAP values are computed, giving a model-specific
-  importance ranking. Also performs train/test split and MICE imputation.
+  Performs the train/test split and MICE imputation (fitted on the
+  training set). Each model (RF, GB, XGBoost) is trained on all
+  features and its own SHAP values are computed on training rows,
+  giving a model-specific importance ranking.
   --> results/shap_{model}.csv   (one per model)
            |
            v
@@ -42,11 +43,17 @@ All network and WQ features (~100+)
   04_kneedle_final_shap.py
   Kneedle algorithm finds the elbow of each F1 vs. n_features curve.
   The best model at its optimal feature count is tuned with
-  RandomizedSearchCV, evaluated on the held-out test set, and
-  SHAP values are computed for the final model.
+  RandomizedSearchCV (average precision, 5-fold CV). The decision
+  threshold is the F1-maximising cut-off on out-of-fold predictions
+  from the training set. The fixed model and threshold are then
+  evaluated once on the held-out test set, and SHAP values are
+  computed for the final model.
   --> results/final_results.csv
   --> results/final_model_shap.pkl
 ```
+# Trained Models
+
+The final models for low chlorine, high iron and high contacts are saved in `models/`. To make predictions on new data use `predict.py` script.
 
 # SOMs Code Pipeline
 

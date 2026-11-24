@@ -1,0 +1,61 @@
+{
+ "target": "iron",
+ "title": "High iron at the customer tap",
+ "positive_class": "total iron above 25 ug/L",
+ "one_row_is": "one tap sample",
+ "algorithm": "RandomForest",
+ "model_file": "model.joblib",
+ "features": [
+  {
+   "column": "CL2FREE_WTW_AVE",
+   "description": "Mean monthly WTW outlet free chlorine"
+  },
+  {
+   "column": "FET_WTW_AVE",
+   "description": "Mean monthly WTW outlet iron"
+  },
+  {
+   "column": "Flow_average",
+   "description": "Average flow at the DMA"
+  },
+  {
+   "column": "Source_Edge_btw",
+   "description": "Source edge betweenness of the pipe"
+  },
+  {
+   "column": "VolumeSupplied_m3_",
+   "description": "Average yearly volume supplied in the WSZ"
+  },
+  {
+   "column": "CIpercentage3",
+   "description": "Percentage of cast iron pipe in the DMA"
+  },
+  {
+   "column": "NormLengthSourceEdgebtw_mean",
+   "description": "Mean source edge betweenness per DMA"
+  }
+ ],
+ "decision_threshold": 0.25467962258836785,
+ "hyperparameters": {
+  "class_weight": "balanced_subsample",
+  "n_estimators": 400,
+  "min_samples_split": 2,
+  "min_samples_leaf": 1,
+  "max_features": "log2",
+  "max_depth": null,
+  "bootstrap": true
+ },
+ "random_state": 42,
+ "n_train": 53258,
+ "n_test": 13315,
+ "test_scores": {
+  "precision": 0.495,
+  "recall": 0.56,
+  "f1": 0.526
+ },
+ "versions": {
+  "scikit-learn": "1.9.1",
+  "xgboost": "3.4.2",
+  "numpy": "2.5.4"
+ }
+}

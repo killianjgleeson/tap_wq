@@ -2,6 +2,9 @@
 Step 1: Per-model SHAP ranking — trains each model on all features and computes
 SHAP values to produce a model-specific feature importance ordering.
 Also performs the train/test split and MICE imputation shared by all subsequent steps.
+
+The ranking is computed on training rows only, so the held-out test set plays no
+part in feature selection and is first used in Step 4 for the final evaluation.
 """
 
 import pandas as pd
@@ -9,6 +12,7 @@ import numpy as np
 import shap
 from pathlib import Path
 from sklearn.model_selection import train_test_split
+from sklearn.experimental import enable_iterative_imputer  # noqa: F401  (required before importing IterativeImputer)
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.utils.class_weight import compute_sample_weight
@@ -25,6 +29,11 @@ TARGET    = 'CL2FREE_1'   # free chlorine residual at the tap (mg/L)
 THRESHOLD = 0.1           # below this = low chlorine event (binary label = 1)
 TEST_SIZE    = 0.2
 RANDOM_STATE = 42
+
+# Number of training rows on which SHAP values are computed for the ranking.
+# TreeSHAP cost scales with the number of rows explained; a random sample of the
+# training set gives a stable ranking. Set to None to use every training row.
+SHAP_SAMPLE_ROWS = 20000
 
 # Domain-knowledge exclusions applied before any modelling.
 # - longitude/latitude: geographic coordinates that would cause location overfitting
@@ -128,14 +137,23 @@ for model_name, model in models.items():
     else:
         model.fit(X_train, y_train)
 
-    print(f"  Computing SHAP values on {len(X_test)} test samples...")
-    explainer = shap.TreeExplainer(model)
-    shap_vals = explainer.shap_values(X_test)
+    # SHAP values are computed on training rows only (never on the test set).
+    if SHAP_SAMPLE_ROWS is not None and len(X_train) > SHAP_SAMPLE_ROWS:
+        X_shap = X_train.sample(n=SHAP_SAMPLE_ROWS, random_state=RANDOM_STATE)
+    else:
+        X_shap = X_train
 
-    # sklearn classifiers return [class_0_array, class_1_array];
-    # XGBoost returns a single 2D array for binary classification.
+    print(f"  Computing SHAP values on {len(X_shap)} training samples...")
+    explainer = shap.TreeExplainer(model)
+    shap_vals = explainer.shap_values(X_shap)
+
+    # Select the positive class. Depending on the model and the shap version the
+    # output is a list [class_0, class_1], a 3-D array (rows, features, classes),
+    # or a single 2-D array that already refers to the positive class.
     if isinstance(shap_vals, list):
         shap_class1 = shap_vals[1]
+    elif np.ndim(shap_vals) == 3:
+        shap_class1 = shap_vals[:, :, 1]
     else:
         shap_class1 = shap_vals
 

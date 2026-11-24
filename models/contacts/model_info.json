@@ -1,0 +1,62 @@
+{
+ "target": "contacts",
+ "title": "High customer contacts",
+ "positive_class": "2 or more customer contacts per 1000 people in the year",
+ "one_row_is": "one DMA in one year",
+ "algorithm": "XGBoost",
+ "model_file": "model.json",
+ "features": [
+  {
+   "column": "DMAPopulation",
+   "description": "DMA population"
+  },
+  {
+   "column": "mean_pop_density",
+   "description": "Mean population density"
+  },
+  {
+   "column": "DMA_Pipe_length_AVE",
+   "description": "Mean pipe length in the DMA"
+  },
+  {
+   "column": "LengthSourceEdgebtw_30percentile",
+   "description": "30th percentile of the source edge betweenness per DMA"
+  },
+  {
+   "column": "MNT_WTW_mean",
+   "description": "Mean yearly WTW outlet manganese"
+  },
+  {
+   "column": "Node_NDegree_90DMA_weighted",
+   "description": "90th percentile of the N-degree (N=3) per DMA"
+  },
+  {
+   "column": "MeshCoeff",
+   "description": "Meshedness coefficient of the DMA"
+  }
+ ],
+ "decision_threshold": 0.47560539841651917,
+ "hyperparameters": {
+  "subsample": 0.7,
+  "reg_lambda": 1.5,
+  "reg_alpha": 0,
+  "n_estimators": 400,
+  "max_depth": 8,
+  "learning_rate": 0.05,
+  "gamma": 0.1,
+  "colsample_bytree": 0.7
+ },
+ "random_state": 42,
+ "n_train": 22468,
+ "n_test": 5618,
+ "test_scores": {
+  "precision": 0.338,
+  "recall": 0.564,
+  "f1": 0.423
+ },
+ "versions": {
+  "scikit-learn": "1.9.1",
+  "xgboost": "3.4.2",
+  "numpy": "2.5.4"
+ }
+}

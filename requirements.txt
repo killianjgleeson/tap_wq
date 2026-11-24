@@ -1,0 +1,6 @@
+# For predict.py. The saved models were written with these versions of scikit-learn and xgboost.
+scikit-learn==1.9.1
+xgboost==3.4.2
+joblib
+numpy
+pandas

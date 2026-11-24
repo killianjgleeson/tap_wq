@@ -1,7 +1,11 @@
 """
 Step 4: Applies Kneedle to each model's stepwise curve to select the optimal
-feature count, tunes the best model, evaluates on the test set, and computes
-final SHAP values.
+feature count, tunes the best model, sets the decision threshold from out-of-fold
+predictions on the training set, evaluates once on the held-out test set, and
+computes final SHAP values.
+
+Model choice, hyperparameters and the decision threshold are all determined from
+the training set; the test set is used only for the final evaluation.
 """
 
 import json
@@ -11,6 +15,7 @@ import pandas as pd
 import shap
 from pathlib import Path
 from kneed import KneeLocator
+from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import (precision_score, recall_score, f1_score,
                              precision_recall_curve)
@@ -156,15 +161,38 @@ print(f"Best CV average precision: {search.best_score_:.4f}")
 print(f"Best hyperparameters:\n  {search.best_params_}")
 
 # =============================================================================
-# TEST SET EVALUATION
+# DECISION THRESHOLD FROM OUT-OF-FOLD TRAINING PREDICTIONS
+# =============================================================================
+# The probability cut-off is chosen without reference to the test set: the tuned
+# model is re-fitted within each CV fold of the training set, the held-out fold is
+# predicted, and the threshold that maximises F1 over these out-of-fold
+# predictions is taken.
+
+print(f"\nSelecting decision threshold from {CV_FOLDS}-fold out-of-fold training predictions...")
+
+oof_probs = np.zeros(len(y_train))
+for tr_idx, val_idx in skf.split(X_train[best_features], y_train):
+    fold_model = clone(tuned_model)
+    X_tr, y_tr = X_train[best_features].iloc[tr_idx], y_train.iloc[tr_idx]
+    if best_model_name == 'GradientBoosting':
+        fold_model.fit(X_tr, y_tr, sample_weight=weights[tr_idx])
+    else:
+        fold_model.fit(X_tr, y_tr)
+    oof_probs[val_idx] = fold_model.predict_proba(X_train[best_features].iloc[val_idx])[:, 1]
+
+prec_arr, rec_arr, thresh_arr = precision_recall_curve(y_train, oof_probs)
+f1_arr     = 2 * prec_arr * rec_arr / (prec_arr + rec_arr + 1e-10)
+best_idx   = int(np.argmax(f1_arr[:-1]))   # last PR point has no threshold
+opt_thresh = float(thresh_arr[best_idx])
+oof_f1     = float(f1_arr[best_idx])
+print(f"Threshold: {opt_thresh:.4f}  (out-of-fold training F1 = {oof_f1:.4f})")
+
+# =============================================================================
+# TEST SET EVALUATION  (single evaluation of the fixed model and threshold)
 # =============================================================================
 
-probs = tuned_model.predict_proba(X_test[best_features])[:, 1]
-prec_arr, rec_arr, thresh_arr = precision_recall_curve(y_test, probs)
-f1_arr     = 2 * prec_arr * rec_arr / (prec_arr + rec_arr + 1e-10)
-best_idx   = int(np.argmax(f1_arr))
-opt_thresh = float(thresh_arr[best_idx])
-y_pred     = (probs >= opt_thresh).astype(int)
+probs  = tuned_model.predict_proba(X_test[best_features])[:, 1]
+y_pred = (probs >= opt_thresh).astype(int)
 
 prec = float(precision_score(y_test, y_pred))
 rec  = float(recall_score(y_test, y_pred))
@@ -172,7 +200,7 @@ f1   = float(f1_score(y_test, y_pred))
 
 print(f"\n--- Test Set Results ---")
 print(f"Model:          {best_model_name} ({len(best_features)} features)")
-print(f"Threshold:      {opt_thresh:.4f}  (F1-optimal on PR curve)")
+print(f"Threshold:      {opt_thresh:.4f}  (F1-optimal on out-of-fold training predictions)")
 print(f"Precision:      {prec:.4f}")
 print(f"Recall:         {rec:.4f}")
 print(f"F1:             {f1:.4f}")
@@ -182,6 +210,7 @@ pd.DataFrame([{
     'n_features':  len(best_features),
     'features':    ', '.join(best_features),
     'threshold':   opt_thresh,
+    'oof_train_f1': oof_f1,
     'precision':   prec,
     'recall':      rec,
     'f1':          f1,
@@ -194,8 +223,20 @@ pd.DataFrame([{
 
 print(f"\nComputing SHAP values for the final tuned {best_model_name}...")
 
-explainer   = shap.Explainer(tuned_model, X_train[best_features])
-shap_values = explainer(X_test[best_features], check_additivity=False)
+try:
+    explainer   = shap.Explainer(tuned_model, X_train[best_features])
+    shap_values = explainer(X_test[best_features], check_additivity=False)
+except Exception as err:
+    # Some shap/xgboost version combinations reject the background-data explainer;
+    # the path-dependent tree explainer gives the same attributions up to the
+    # treatment of feature dependence.
+    print(f"  Background-data explainer unavailable ({type(err).__name__}); using TreeExplainer")
+    shap_values = shap.TreeExplainer(tuned_model)(X_test[best_features], check_additivity=False)
+
+# Keep the positive class where the explainer returns one column per class
+# (e.g. RandomForest: values of shape (rows, features, 2)).
+if np.ndim(shap_values.values) == 3:
+    shap_values = shap_values[:, :, 1]
 
 with open(RESULTS_DIR / 'final_model_shap.pkl', 'wb') as f:
     pickle.dump({

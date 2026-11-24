@@ -1,0 +1,59 @@
+{
+ "target": "chlorine",
+ "title": "Low free chlorine at the customer tap",
+ "positive_class": "free chlorine below 0.1 mg/L",
+ "one_row_is": "one tap sample",
+ "algorithm": "XGBoost",
+ "model_file": "model.json",
+ "features": [
+  {
+   "column": "dayofyear_sin",
+   "description": "Seasonality: sin(2*pi*day of year/365) of the sample date"
+  },
+  {
+   "column": "CL2FREE_WTW_AVE",
+   "description": "Mean monthly WTW outlet free chlorine"
+  },
+  {
+   "column": "MNT_WTW_AVE",
+   "description": "Mean monthly WTW outlet manganese"
+  },
+  {
+   "column": "mean_pop_density",
+   "description": "Mean population density"
+  },
+  {
+   "column": "DMA_Pipe_length_AVE",
+   "description": "Mean pipe length in the DMA"
+  },
+  {
+   "column": "VolumeSupplied_m3_",
+   "description": "Average yearly volume supplied in the WSZ"
+  }
+ ],
+ "decision_threshold": 0.5265572667121887,
+ "hyperparameters": {
+  "subsample": 0.9,
+  "reg_lambda": 2,
+  "reg_alpha": 1,
+  "n_estimators": 400,
+  "min_child_weight": 1,
+  "max_depth": 12,
+  "learning_rate": 0.05,
+  "gamma": 0.1,
+  "colsample_bytree": 0.9
+ },
+ "random_state": 42,
+ "n_train": 150392,
+ "n_test": 37599,
+ "test_scores": {
+  "precision": 0.641,
+  "recall": 0.748,
+  "f1": 0.691
+ },
+ "versions": {
+  "scikit-learn": "1.9.1",
+  "xgboost": "3.4.2",
+  "numpy": "2.5.4"
+ }
+}
